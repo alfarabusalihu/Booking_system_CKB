@@ -1,0 +1,63 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Train {
+  id        String     @id @default(uuid())
+  name      String
+  capacity  Int
+  schedules Schedule[]
+  seats     Seat[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model Station {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  code      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Schedule {
+  id            String   @id @default(uuid())
+  trainId       String
+  train         Train    @relation(fields: [trainId], references: [id])
+  originId      String
+  destinationId String
+  departureTime DateTime
+  arrivalTime   DateTime
+  travelDate    DateTime @db.Date
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Seat {
+  id        String           @id @default(uuid())
+  trainId   String
+  train     Train            @relation(fields: [trainId], references: [id])
+  seatNo    String
+  class     String
+  locks     TemporaryLock[]
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+}
+
+model TemporaryLock {
+  id         String   @id @default(uuid())
+  trainId    String
+  seatId     String
+  seat       Seat     @relation(fields: [seatId], references: [id])
+  travelDate DateTime @db.Date
+  lockedAt   DateTime @default(now())
+  expiresAt  DateTime
+  sessionId  String
+  createdAt  DateTime @default(now())
+
+  @@unique([trainId, seatId, travelDate])
+}
