@@ -17,11 +17,13 @@ model Train {
 }
 
 model Station {
-  id        String   @id @default(uuid())
-  name      String   @unique
-  code      String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                 String     @id @default(uuid())
+  name               String     @unique
+  code               String     @unique
+  originSchedules    Schedule[] @relation("ScheduleOrigin")
+  destinationSchedules Schedule[] @relation("ScheduleDestination")
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
 }
 
 model Schedule {
@@ -29,7 +31,9 @@ model Schedule {
   trainId       String
   train         Train    @relation(fields: [trainId], references: [id])
   originId      String
+  origin        Station  @relation("ScheduleOrigin", fields: [originId], references: [id])
   destinationId String
+  destination   Station  @relation("ScheduleDestination", fields: [destinationId], references: [id])
   departureTime DateTime
   arrivalTime   DateTime
   travelDate    DateTime @db.Date
@@ -49,15 +53,18 @@ model Seat {
 }
 
 model TemporaryLock {
-  id         String   @id @default(uuid())
-  trainId    String
-  seatId     String
-  seat       Seat     @relation(fields: [seatId], references: [id])
-  travelDate DateTime @db.Date
-  lockedAt   DateTime @default(now())
-  expiresAt  DateTime
-  sessionId  String
-  createdAt  DateTime @default(now())
+  id          String   @id @default(uuid())
+  trainId     String
+  scheduleId  String?
+  seatId      String
+  seat        Seat     @relation(fields: [seatId], references: [id])
+  travelDate  DateTime @db.Date
+  segmentMask Int      @default(1)
+  lockedAt    DateTime @default(now())
+  expiresAt   DateTime
+  sessionId   String
+  createdAt   DateTime @default(now())
 
-  @@unique([trainId, seatId, travelDate])
+  @@index([trainId, seatId, travelDate])
+  @@index([scheduleId, seatId, travelDate])
 }

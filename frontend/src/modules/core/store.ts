@@ -1,10 +1,13 @@
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
 
 export interface SeatBooking {
   trainId: string;
+  scheduleId?: string;
   travelDate: string;
   seatId: string;
+  seatNo?: string;
+  class?: string;
+  price?: number;
 }
 
 export interface Station {
@@ -15,6 +18,10 @@ export interface Station {
 
 export interface ScheduleOption {
   id: string;
+  trainId: string;
+  trainName: string;
+  origin: string;
+  destination: string;
   value: string;
   label: string;
 }
@@ -26,100 +33,113 @@ export interface SearchQuery {
   time: string;
 }
 
+export interface User {
+  name: string;
+  email: string;
+}
+
+const freshSearchQuery = (): SearchQuery => ({
+  origin: '',
+  destination: '',
+  date: new Date().toISOString().split('T')[0],
+  time: '',
+});
+
 interface BookingState {
   cart: SeatBooking[];
   stations: Station[];
   schedules: ScheduleOption[];
+  seatStats: {
+    total: number;
+    available: number;
+    booked: number;
+  };
   searchQuery: SearchQuery;
+  user: User | null;
   addSeat: (seat: SeatBooking) => void;
   removeSeat: (seatId: string) => void;
   resetBooking: () => void;
   setSearchQuery: (query: Partial<SearchQuery>) => void;
   setStations: (stations: Station[]) => void;
   setSchedules: (schedules: ScheduleOption[]) => void;
+  setSeatStats: (stats: { total: number; available: number; booked: number }) => void;
+  loginUser: (user: User) => void;
+  logoutUser: () => void;
 }
 
 export const useBookingStore = create<BookingState>()(
-  persist(
     (set, get) => ({
       cart: [],
       stations: [],
       schedules: [],
-      searchQuery: {
-        origin: '',
-        destination: '',
-        date: new Date().toISOString().split('T')[0],
-        time: '',
+      seatStats: {
+        total: 0,
+        available: 0,
+        booked: 0,
       },
+      searchQuery: freshSearchQuery(),
+      user: null,
       addSeat: (seat) => {
         const { cart } = get();
         if (cart.length >= 6) {
-          console.warn('[BOOKING_STORE] Cannot add more than 6 seats per session.');
           return;
         }
         set({ cart: [...cart, seat] });
-        console.log('[BOOKING_STORE] Seat added:', seat);
       },
       removeSeat: (seatId) => {
         set((state) => ({
           cart: state.cart.filter((s) => s.seatId !== seatId),
         }));
-        console.log('[BOOKING_STORE] Seat removed:', seatId);
       },
       resetBooking: () => {
         set({
           cart: [],
           stations: [],
           schedules: [],
-          searchQuery: {
-            origin: '',
-            destination: '',
-            date: new Date().toISOString().split('T')[0],
-            time: '',
+          seatStats: {
+            total: 0,
+            available: 0,
+            booked: 0,
           },
+          searchQuery: freshSearchQuery(),
         });
-        console.log('[BOOKING_STORE] Booking, stations, schedules & search query reset.');
       },
       setSearchQuery: (query) => {
         set((state) => ({
           searchQuery: { ...state.searchQuery, ...query },
         }));
-        console.log('[SEARCH_STORE] Search query updated:', get().searchQuery);
       },
       setStations: (fetchedStations) => {
-        const currentQuery = get().searchQuery;
-        const initialOrigin = currentQuery.origin || (fetchedStations[0]?.code ?? '');
-        const initialDestination = currentQuery.destination || (fetchedStations[1]?.code ?? fetchedStations[0]?.code ?? '');
-
         set({
           stations: fetchedStations,
-          searchQuery: {
-            ...currentQuery,
-            origin: initialOrigin,
-            destination: initialDestination,
-          },
         });
-        console.log('[SEARCH_STORE] Stations synced from backend:', fetchedStations.length, { initialOrigin, initialDestination });
       },
       setSchedules: (fetchedSchedules) => {
-        const currentQuery = get().searchQuery;
-        const initialTime = currentQuery.time || (fetchedSchedules[0]?.value ?? '');
-
         set({
           schedules: fetchedSchedules,
-          searchQuery: {
-            ...currentQuery,
-            time: initialTime,
-          },
         });
-        console.log('[SEARCH_STORE] Schedules synced from backend:', fetchedSchedules.length, { initialTime });
       },
-    }),
-    {
-      name: 'booking-storage',
-      storage: createJSONStorage(() => sessionStorage),
-      // Only persist the cart — search fields always start fresh every session
-      partialize: (state) => ({ cart: state.cart }),
-    }
-  )
+      setSeatStats: (stats) => {
+        set({ seatStats: stats });
+      },
+      loginUser: (user) => {
+        set({ user });
+      },
+      logoutUser: () => {
+        if (typeof window !== 'undefined') {
+          sessionStorage.removeItem('booking-storage');
+          sessionStorage.removeItem('booking_session_id');
+        }
+        set({
+          user: null,
+          cart: [],
+          seatStats: {
+            total: 0,
+            available: 0,
+            booked: 0,
+          },
+          searchQuery: freshSearchQuery(),
+        });
+      },
+    })
 );

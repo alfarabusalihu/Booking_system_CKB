@@ -7,7 +7,10 @@
     "strict": true,
     "skipLibCheck": true,
     "sourceMap": true,
-    "declaration": true
+    "declaration": true,
+    "rootDir": ".",
+    "outDir": "dist"
   },
-  "include": ["src/**/*", "prisma/**/*", "prisma.config.ts"]
+  "include": ["src/**/*.ts", "prisma/**/*.ts", "prisma.config.ts"],
+  "exclude": ["dist", "node_modules"]
 }

@@ -2,13 +2,15 @@
   "name": "backend",
   "version": "1.0.0",
   "description": "Sri Lanka Train Reservation System - Backend API",
-  "main": "src/index.ts",
+  "main": "dist/src/index.js",
   "type": "module",
   "scripts": {
     "postinstall": "prisma generate",
     "dev": "tsx watch src/index.ts",
     "seed": "tsx prisma/seed.ts",
+    "prisma:migrate": "prisma migrate deploy",
     "build": "tsc",
+    "start": "node dist/src/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -28,7 +30,6 @@
     "@types/node": "^26.1.2",
     "@types/pg": "^8.20.3",
     "prisma": "^7.9.1",
-    "ts-node": "^10.9.2",
     "tsx": "^4.23.1",
     "typescript": "^7.0.2"
   }

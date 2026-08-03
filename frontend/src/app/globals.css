@@ -8,38 +8,130 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-family: var(--font-sans);
+  scroll-behavior: smooth;
 }
 
 /* Common UI Utility Classes */
 @layer components {
   .glass-panel {
-    @apply backdrop-blur-2xl bg-slate-900/50 p-6 md:p-8 rounded-3xl border border-slate-700/40 shadow-2xl shadow-black/40 relative;
+    @apply backdrop-blur-2xl bg-slate-900/50 p-5 md:p-7 rounded-lg border border-slate-700/40 shadow-2xl shadow-black/40 relative;
+  }
+
+  .glass-panel-compact {
+    @apply backdrop-blur-2xl bg-slate-900/60 rounded-lg border border-slate-700/40 shadow-xl shadow-black/30 relative;
   }
 
   .input-select-field {
-    @apply w-full h-14 bg-slate-950/70 text-white rounded-2xl px-5 py-3 border border-slate-700/60 
-           focus:border-slate-500 focus:outline-none focus:ring-2 focus:ring-white/10 transition-all 
-           font-medium cursor-pointer appearance-none leading-tight;
+    @apply w-full h-12 bg-slate-950/70 text-white rounded-lg px-4 py-2.5 border border-slate-700/60
+           focus:border-slate-500 focus:outline-none focus:ring-2 focus:ring-white/10 transition-all
+           text-sm font-medium cursor-pointer appearance-none leading-tight;
+  }
+
+  .select-shell {
+    @apply relative w-full min-w-0;
+  }
+
+  .app-select {
+    @apply pr-10 truncate;
+  }
+
+  .select-chevron {
+    @apply pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500;
+  }
+
+  .date-shell {
+    @apply w-full cursor-pointer rounded-lg;
+  }
+
+  .date-field {
+    @apply cursor-pointer;
+  }
+
+  .date-field::-webkit-calendar-picker-indicator {
+    cursor: pointer;
   }
 
   .field-label {
     @apply text-[11px] font-bold uppercase tracking-widest flex items-center gap-1.5 px-1;
   }
 
+  .field-error {
+    @apply px-1 text-[11px] font-semibold leading-snug text-rose-400;
+  }
+
   .btn-icon-square {
-    @apply h-14 w-14 shrink-0 bg-slate-800/60 hover:bg-slate-700/80 rounded-2xl border border-slate-700/50 
+    @apply h-12 w-12 shrink-0 bg-slate-800/60 hover:bg-slate-700/80 rounded-lg border border-slate-700/50
            flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer;
   }
 
   .skeleton-field {
-    @apply w-full h-14 bg-slate-800/40 rounded-2xl animate-pulse border border-slate-700/30;
+    @apply w-full h-12 bg-slate-800/40 rounded-lg animate-pulse border border-slate-700/30;
   }
+
+  .search-panel {
+    @apply shadow-black/30;
+  }
+
+  .carriage-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(99 102 241 / 0.55) rgb(15 23 42 / 0.65);
+  }
+
+  .carriage-scroll::-webkit-scrollbar {
+    width: 10px;
+  }
+
+  .carriage-scroll::-webkit-scrollbar-track {
+    background: rgb(15 23 42 / 0.65);
+    border-left: 1px solid rgb(30 41 59 / 0.8);
+  }
+
+  .carriage-scroll::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, rgb(99 102 241 / 0.8), rgb(16 185 129 / 0.65));
+    border: 2px solid rgb(15 23 42);
+    border-radius: 999px;
+  }
+
+  .carriage-scroll::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, rgb(129 140 248), rgb(52 211 153 / 0.85));
+  }
+
+  .transition-card {
+    @apply transition-[opacity,transform,border-color,box-shadow] duration-300 ease-out;
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes panelIn {
+  from { transform: translateY(10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.22s ease-out both;
+}
+
+.animate-panelIn {
+  animation: panelIn 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.animate-slideInRight {
+  animation: slideInRight 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
 }
