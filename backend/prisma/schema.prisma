@@ -41,15 +41,64 @@ model Schedule {
   updatedAt     DateTime @updatedAt
 }
 
+enum ReservationStatus {
+  HOLD
+  CONFIRMED
+  EXPIRED
+}
+
+model User {
+  id                   String            @id @default(uuid())
+  fullName             String
+  email                String            @unique
+  phone                String?
+  passwordHash         String
+  identificationType   String?           // 'NIC' or 'PASSPORT' - user's preferred ID
+  identificationNumber String?           // For consistency checks
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+  reservations         SeatReservation[]
+}
+
 model Seat {
-  id        String           @id @default(uuid())
-  trainId   String
-  train     Train            @relation(fields: [trainId], references: [id])
-  seatNo    String
-  class     String
-  locks     TemporaryLock[]
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
+  id           String            @id @default(uuid())
+  trainId      String
+  train        Train             @relation(fields: [trainId], references: [id])
+  seatNo       String
+  class        String
+  locks        TemporaryLock[]
+  reservations SeatReservation[]
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+}
+
+model SeatReservation {
+  id                   String            @id @default(uuid())
+  userId               String?
+  user                 User?             @relation(fields: [userId], references: [id])
+  trainId              String
+  scheduleId           String?
+  seatId               String
+  seat                 Seat              @relation(fields: [seatId], references: [id])
+  travelDate           DateTime          @db.Date
+  segmentMask          Int               @default(1)
+  status               ReservationStatus @default(HOLD)
+  sessionId            String
+  expiresAt            DateTime
+  paymentIntentId      String?
+  bookingRef           String?           @unique
+  priceLkr             Int               @default(0)
+  identificationType   String?           // 'NIC' or 'PASSPORT'
+  identificationNumber String?           // Passenger's ID for this booking
+  lockedAt             DateTime          @default(now())
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+
+  @@index([trainId, seatId, travelDate])
+  @@index([scheduleId, seatId, travelDate])
+  @@index([sessionId])
+  @@index([status, expiresAt])
+  @@index([identificationNumber, travelDate, status])
 }
 
 model TemporaryLock {

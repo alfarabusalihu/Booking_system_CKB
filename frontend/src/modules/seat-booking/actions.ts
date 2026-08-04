@@ -10,7 +10,8 @@ export async function holdSeatAction(params: {
   from?: string;
   to?: string;
   sessionId: string;
-}): Promise<boolean> {
+  priceLkr?: number;
+}): Promise<{ success: boolean; reservationId?: string }> {
   const res = await fetch(`${API_BASE_URL}/api/seats/lock`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -28,7 +29,7 @@ export async function holdSeatAction(params: {
   }
 
   const data = await res.json();
-  return data.success;
+  return { success: data.success, reservationId: data.reservationId };
 }
 
 export async function releaseSeatAction(params: {

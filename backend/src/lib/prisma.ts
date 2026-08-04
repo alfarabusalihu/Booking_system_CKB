@@ -14,7 +14,10 @@ if (!process.env.DATABASE_URL) {
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
 
-export const prisma = new PrismaClient({ adapter });
+// Create Prisma client with adapter
+// TypeScript type assertion to work around adapter type issues
+const prismaWithAdapter = new PrismaClient({ adapter });
+export const prisma = prismaWithAdapter as any as PrismaClient;
 
 pool.query('SELECT 1')
   .then(() => log('DB', 'PostgreSQL connection verified.'))

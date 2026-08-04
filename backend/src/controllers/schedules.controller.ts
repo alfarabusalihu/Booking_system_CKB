@@ -21,16 +21,27 @@ export async function getSchedules(_req: Request, res: Response): Promise<void> 
 
     const formatted = schedules.map((s) => {
       const dep = new Date(s.departureTime);
-      const timeStr = dep.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+      const arr = new Date(s.arrivalTime);
+      
+      const depTimeStr = dep.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+      const arrTimeStr = arr.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+      
       const value = `${String(dep.getHours()).padStart(2, '0')}:${String(dep.getMinutes()).padStart(2, '0')}`;
+      const originName = stationById.get(s.originId)?.name ?? '';
+      const destinationName = stationById.get(s.destinationId)?.name ?? '';
+      
       return {
         id: s.id,
         trainId: s.trainId,
         trainName: s.train.name,
         origin: stationById.get(s.originId)?.code ?? '',
         destination: stationById.get(s.destinationId)?.code ?? '',
+        originName,
+        destinationName,
+        departureTime: depTimeStr,
+        arrivalTime: arrTimeStr,
         value,
-        label: `${timeStr} (${s.train.name})`,
+        label: `${depTimeStr} - ${arrTimeStr} | ${s.train.name}`,
       };
     });
 

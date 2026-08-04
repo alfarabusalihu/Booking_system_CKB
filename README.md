@@ -30,11 +30,13 @@ The frontend only exposes valid route and departure combinations returned by the
 
 ## Demo Limits
 
-- Authentication is mock-only. Any valid email and password with at least 6 characters can sign in from the seat view.
-- Payment is mock-only.
+- Authentication uses email/password with basic validation. Any valid email and password with at least 6 characters can sign in.
+- **Payment is mock-only** - uses simulated payment form that accepts any card details (no real Stripe processing).
 - PDF tickets are generated in the browser for demo purposes.
 - Confirmed bookings are not persisted in a permanent booking table yet.
 - Temporary locks represent both live holds and seeded booked seats.
+
+**Note:** Real Stripe payment integration is fully documented in `STRIPE_INTEGRATION_GUIDE.md` for production deployment.
 
 ## Tech Stack
 
@@ -175,8 +177,34 @@ The direct npm dependencies are intentionally small. Each package in `backend/pa
 
 ## Next Improvements
 
-- Real authentication with hashed passwords and secure HTTP-only sessions
+### Payment Integration
+- **Real Stripe Integration**: Complete implementation guide available in `STRIPE_INTEGRATION_GUIDE.md`
+  - Payment intent creation
+  - Webhook handling
+  - 3D Secure support
+  - Production deployment steps
+  - Estimated implementation: 4-6 hours
+
+### Authentication & Security
+- **Email Verification System**: Full email verification flow with SMTP integration, verification tokens, and resend functionality (implementation available in `EMAIL_VERIFICATION_SETUP.md`)
+- Rate limiting on authentication endpoints
+- CAPTCHA on registration
+- Two-factor authentication
+
+### Features
+- Real authentication with hashed passwords and secure HTTP-only sessions ✅ (already implemented)
 - Permanent bookings and tickets separate from temporary locks
 - Server-side PDF generation
-- Real payment provider integration
 - Automated integration tests for search, locks, checkout, and session cleanup
+- Admin dashboard for monitoring live seat locks and revenue metrics (Phase 5)
+- Docker containerization with multi-stage builds (Phase 5)
+- Email notifications for bookings
+- Booking history and management
+- Refund processing
+
+## Current Validations
+
+✅ **Email Format Validation**: Registration validates email format using regex  
+✅ **Duplicate Email Check**: `/api/auth/check-email` endpoint prevents duplicate registrations  
+✅ **Password Strength**: Minimum 6 characters enforced  
+✅ **Input Sanitization**: All user inputs are trimmed and validated

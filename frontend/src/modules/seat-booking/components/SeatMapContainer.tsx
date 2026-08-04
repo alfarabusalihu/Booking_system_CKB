@@ -116,8 +116,17 @@ export function SeatMapContainer({
     setActionSeatId(seat.id);
     setErrorMessage(null);
     try {
-      await holdSeatAction({ trainId, scheduleId, seatId: seat.id, date, from, to, sessionId });
       const price = seat.class === '1st Class' ? 1200 : 650;
+      const result = await holdSeatAction({ 
+        trainId, 
+        scheduleId, 
+        seatId: seat.id, 
+        date, 
+        from, 
+        to, 
+        sessionId,
+        priceLkr: price 
+      });
       addSeat({
         trainId,
         scheduleId,
@@ -126,6 +135,7 @@ export function SeatMapContainer({
         seatNo: seat.seatNo,
         class: seat.class,
         price,
+        reservationId: result.reservationId,
       });
       setSeats((prev) =>
         prev.map((s) => (s.id === seat.id ? { ...s, isLocked: true, lockedBySessionId: sessionId } : s))

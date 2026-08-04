@@ -43,12 +43,9 @@ async function main() {
 
   await prisma.station.deleteMany({ where: { code: { in: ['ELL', 'GAL'] } } });
 
-  const colomboKandy = await upsertTrain('train-colombo-kandy-express', 'Colombo Kandy Express');
-  const kandyColombo = await upsertTrain('train-kandy-colombo-express', 'Kandy Colombo Express');
-  const colomboBadulla = await upsertTrain('train-colombo-badulla-express', 'Colombo Badulla Express');
-  const badullaColombo = await upsertTrain('train-badulla-colombo-express', 'Badulla Colombo Express');
-  const kandyBadulla = await upsertTrain('train-kandy-badulla-link', 'Kandy Badulla Link');
-  const badullaKandy = await upsertTrain('train-badulla-kandy-link', 'Badulla Kandy Link');
+  // Create trains - one train serves multiple segments
+  const expressEast = await upsertTrain('train-express-east', 'Express East');
+  const expressWest = await upsertTrain('train-express-west', 'Express West');
 
   const today = new Date();
   const atTime = (hour: number, minute: number) => {
@@ -57,60 +54,71 @@ async function main() {
     return d;
   };
 
+  // CRITICAL: Same train, same departure time, different route segments
+  // This enables segment-based booking where users only pay for their segment
   const seededSchedules = await prisma.schedule.createManyAndReturn({
     data: [
+      // Express East - Departs Colombo at 6:00 AM
+      // Segment 1: Colombo → Kandy (6:00 - 9:20)
       {
-        trainId: colomboKandy.id,
+        trainId: expressEast.id,
         originId: cmb.id,
         destinationId: knd.id,
-        departureTime: atTime(5, 55),
-        arrivalTime: atTime(9, 15),
+        departureTime: atTime(6, 0),
+        arrivalTime: atTime(9, 20),
         travelDate: new Date(),
       },
+      // Segment 2: Colombo → Badulla (SAME TRAIN, SAME 6:00 departure)
       {
-        trainId: kandyColombo.id,
-        originId: knd.id,
-        destinationId: cmb.id,
-        departureTime: atTime(15, 30),
-        arrivalTime: atTime(19, 0),
-        travelDate: new Date(),
-      },
-      {
-        trainId: colomboBadulla.id,
+        trainId: expressEast.id,
         originId: cmb.id,
         destinationId: bdl.id,
-        departureTime: atTime(6, 30),
-        arrivalTime: atTime(14, 0),
+        departureTime: atTime(6, 0), // Same departure time!
+        arrivalTime: atTime(13, 30),
         travelDate: new Date(),
       },
+      // Segment 3: Kandy → Badulla (SAME TRAIN, continues from Kandy)
       {
-        trainId: badullaColombo.id,
-        originId: bdl.id,
-        destinationId: cmb.id,
-        departureTime: atTime(9, 0),
-        arrivalTime: atTime(16, 30),
-        travelDate: new Date(),
-      },
-      {
-        trainId: kandyBadulla.id,
+        trainId: expressEast.id,
         originId: knd.id,
         destinationId: bdl.id,
-        departureTime: atTime(10, 15),
-        arrivalTime: atTime(15, 45),
+        departureTime: atTime(9, 30), // Departs Kandy after 10min stop
+        arrivalTime: atTime(13, 30),
         travelDate: new Date(),
       },
+
+      // Express West - Departs Badulla at 14:00 PM
+      // Segment 1: Badulla → Kandy (14:00 - 18:00)
       {
-        trainId: badullaKandy.id,
+        trainId: expressWest.id,
         originId: bdl.id,
         destinationId: knd.id,
-        departureTime: atTime(11, 30),
-        arrivalTime: atTime(17, 0),
+        departureTime: atTime(14, 0),
+        arrivalTime: atTime(18, 0),
+        travelDate: new Date(),
+      },
+      // Segment 2: Badulla → Colombo (SAME TRAIN, SAME 14:00 departure)
+      {
+        trainId: expressWest.id,
+        originId: bdl.id,
+        destinationId: cmb.id,
+        departureTime: atTime(14, 0), // Same departure time!
+        arrivalTime: atTime(21, 30),
+        travelDate: new Date(),
+      },
+      // Segment 3: Kandy → Colombo (SAME TRAIN, continues from Kandy)
+      {
+        trainId: expressWest.id,
+        originId: knd.id,
+        destinationId: cmb.id,
+        departureTime: atTime(18, 10), // Departs Kandy after 10min stop
+        arrivalTime: atTime(21, 30),
         travelDate: new Date(),
       },
     ],
   });
 
-  const trains = [colomboKandy, kandyColombo, colomboBadulla, badullaColombo, kandyBadulla, badullaKandy];
+  const trains = [expressEast, expressWest];
   for (const train of trains) {
     const existingSeatsCount = await prisma.seat.count({ where: { trainId: train.id } });
     if (existingSeatsCount === 0) {
@@ -128,7 +136,14 @@ async function main() {
   const lockExpiry = new Date();
   lockExpiry.setFullYear(lockExpiry.getFullYear() + 1);
 
-  for (const schedule of seededSchedules) {
+  // Only seed bookings for FULL ROUTE schedules to test segment-based booking properly
+  // CMB→BDL and BDL→CMB schedules represent the full train journey
+  const fullRouteSchedules = seededSchedules.filter(s => 
+    (s.originId === cmb.id && s.destinationId === bdl.id) ||
+    (s.originId === bdl.id && s.destinationId === cmb.id)
+  );
+
+  for (const schedule of fullRouteSchedules) {
     const seatsForTrain = await prisma.seat.findMany({
       where: { trainId: schedule.trainId },
       orderBy: [{ class: 'asc' }, { seatNo: 'asc' }],
@@ -140,20 +155,47 @@ async function main() {
         const travelDate = new Date(schedule.travelDate);
         travelDate.setDate(travelDate.getDate() + dayOffset);
 
-        return seatsForTrain.map((seat, index) => ({
-          trainId: schedule.trainId,
-          scheduleId: schedule.id,
-          seatId: seat.id,
-          travelDate,
-          segmentMask: index % 2 === 0 ? 1 : 3,
-          expiresAt: lockExpiry,
-          sessionId: `seed-booked-${schedule.id}`,
-        }));
+        return seatsForTrain.map((seat, index) => {
+          // Alternate between segment 1 only and full route (segments 1+2)
+          // segmentMask 1 = first segment only (CMB→KND or BDL→KND)
+          // segmentMask 3 = both segments (full route)
+          const segmentMask = index % 2 === 0 ? 1 : 3;
+          
+          return {
+            trainId: schedule.trainId,
+            scheduleId: schedule.id,
+            seatId: seat.id,
+            travelDate,
+            segmentMask,
+            expiresAt: lockExpiry,
+            sessionId: `seed-booked-${schedule.id}`,
+          };
+        });
       }),
     });
   }
 
   console.log('Seeding complete!');
+  console.log('');
+  console.log('═══════════════════════════════════════════════════════════');
+  console.log('SEGMENT-BASED BOOKING TEST SCENARIOS:');
+  console.log('═══════════════════════════════════════════════════════════');
+  console.log('');
+  console.log('Train: Express East (6:00 AM departure from Colombo)');
+  console.log('  → Colombo to Kandy: 6:00 AM - 9:20 AM');
+  console.log('  → Colombo to Badulla: 6:00 AM - 1:30 PM (full route)');
+  console.log('  → Kandy to Badulla: 9:30 AM - 1:30 PM');
+  console.log('');
+  console.log('Train: Express West (2:00 PM departure from Badulla)');
+  console.log('  → Badulla to Kandy: 2:00 PM - 6:00 PM');
+  console.log('  → Badulla to Colombo: 2:00 PM - 9:30 PM (full route)');
+  console.log('  → Kandy to Colombo: 6:10 PM - 9:30 PM');
+  console.log('');
+  console.log('TEST CASE:');
+  console.log('  1. Book seat A1 for Colombo → Kandy (segment 1)');
+  console.log('  2. Same seat A1 should be FREE for Kandy → Badulla (segment 2)');
+  console.log('  3. User pays only for the segment they travel!');
+  console.log('═══════════════════════════════════════════════════════════');
 }
 
 main()

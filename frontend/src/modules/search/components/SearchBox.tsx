@@ -177,7 +177,13 @@ export function SearchBox() {
     const input = dateInputRef.current;
     if (!input) return;
     input.focus();
-    input.showPicker?.();
+    // showPicker() requires a user gesture, wrap in try-catch
+    try {
+      input.showPicker?.();
+    } catch (error) {
+      // Silently fail if showPicker is not available or blocked
+      // User can still manually interact with the date input
+    }
   };
 
   const retryFetch = async () => {
@@ -362,6 +368,29 @@ export function SearchBox() {
               </div>
             )}
             {shouldShowError('time') && <p className="field-error">{validationErrors.time}</p>}
+          </div>
+        </div>
+      )}
+      
+      {/* Journey Timeline Display */}
+      {!dataError && selectedSchedule && selectedSchedule.departureTime && selectedSchedule.arrivalTime && (
+        <div className="mt-4 p-4 rounded-xl bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20">
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <div className="text-xs text-slate-400 mb-1">Departure from {selectedSchedule.originName || origin}</div>
+              <div className="text-lg font-black text-emerald-400">{selectedSchedule.departureTime}</div>
+            </div>
+            <div className="px-4">
+              <div className="text-2xl text-slate-500">→</div>
+            </div>
+            <div className="flex-1 text-right">
+              <div className="text-xs text-slate-400 mb-1">Arrival at {selectedSchedule.destinationName || destination}</div>
+              <div className="text-lg font-black text-cyan-400">{selectedSchedule.arrivalTime}</div>
+            </div>
+          </div>
+          <div className="mt-2 pt-2 border-t border-slate-700/50 flex items-center justify-between text-xs">
+            <span className="text-slate-500">Train: {selectedSchedule.trainName}</span>
+            <span className="text-slate-500 font-mono">ID: {selectedSchedule.trainId}</span>
           </div>
         </div>
       )}

@@ -12,9 +12,7 @@ export async function getRouteStats(_req: Request, res: Response): Promise<void>
       include: {
         seats: true,
         schedules: {
-          include: {
-            // Join origin and destination Station to get codes
-          },
+          include: {},
         },
       },
     });

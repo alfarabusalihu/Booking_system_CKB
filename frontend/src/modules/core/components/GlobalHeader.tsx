@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
-import { Train, LogOut, ChevronDown } from 'lucide-react';
+import { Train, LogOut, ChevronDown, Loader2 } from 'lucide-react';
 import { useBookingStore } from '@/modules/core/store';
 import { releaseSeatAction } from '@/modules/seat-booking/actions';
+import { getCurrentUser, logoutUser as logoutUserApi } from '@/modules/auth/api';
 
 function getSessionId(): string | null {
   if (typeof window === 'undefined') return null;
@@ -12,11 +13,12 @@ function getSessionId(): string | null {
 }
 
 export function GlobalHeader() {
-  const { user, cart, logoutUser } = useBookingStore();
+  const { user, cart, logoutUser, loginUser } = useBookingStore();
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [isLoadingAuth, setIsLoadingAuth] = useState(true);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const clearSession = useCallback(() => {
+  const clearSession = useCallback(async () => {
     const sessionId = getSessionId();
     if (sessionId) {
       void Promise.allSettled(
@@ -30,9 +32,43 @@ export function GlobalHeader() {
         )
       );
     }
+    
+    // Call backend logout to clear HTTP-only cookie
+    try {
+      await logoutUserApi();
+    } catch (error) {
+      console.error('Logout API error:', error);
+    }
+    
     logoutUser();
     setDropdownOpen(false);
   }, [cart, logoutUser]);
+
+  // Check authentication status on mount
+  useEffect(() => {
+    async function checkAuth() {
+      if (user) {
+        setIsLoadingAuth(false);
+        return;
+      }
+
+      try {
+        const response = await getCurrentUser();
+        if (response.success && response.user) {
+          loginUser({
+            name: response.user.fullName,
+            email: response.user.email,
+          });
+        }
+      } catch (error) {
+        console.error('Auth check failed:', error);
+      } finally {
+        setIsLoadingAuth(false);
+      }
+    }
+
+    checkAuth();
+  }, [user, loginUser]);
 
   useEffect(() => {
     if (!dropdownOpen) return;
@@ -80,9 +116,14 @@ export function GlobalHeader() {
         </div>
       </Link>
 
-      {/* Far Right: User menu only after seat-flow login */}
+      {/* Far Right: User menu */}
       <div className="flex items-center gap-4">
-        {user && (
+        {isLoadingAuth ? (
+          <div className="flex items-center gap-2 px-4 py-2 text-slate-400">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <span className="text-sm hidden sm:inline">Loading...</span>
+          </div>
+        ) : user ? (
           <div className="relative" ref={dropdownRef}>
             <button
               type="button"
@@ -112,6 +153,10 @@ export function GlobalHeader() {
                 </button>
               </div>
             )}
+          </div>
+        ) : (
+          <div className="text-xs text-slate-500 hidden sm:block">
+            Select seats to sign in
           </div>
         )}
       </div>
